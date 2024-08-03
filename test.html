@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Mini App - Scan Text</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        #fileInput {
+            display: block;
+            margin: 20px auto;
+        }
+        #scanButton {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #output {
+            margin-top: 20px;
+            text-align: left;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Scan Invoice</h1>
+    <input type="file" id="fileInput" accept="image/*" capture="camera">
+    <button id="scanButton">Scan Invoice</button>
+    <pre id="output"></pre>
+
+    <script>
+        // Telegram Web Apps initialization
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+
+        document.getElementById('scanButton').addEventListener('click', () => {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            Tesseract.recognize(
+                file,
+                'eng',
+                {
+                    logger: (m) => console.log(m)
+                }
+            ).then(({ data: { text } }) => {
+                document.getElementById('output').textContent = text;
+
+                // Optional: Process the extracted text to detect values
+                const lines = text.split('\n');
+                const values = {};
+                lines.forEach(line => {
+                    if (line.includes('DATE:')) {
+                        values.date = line.split('DATE:')[1].trim();
+                    }
+                    if (line.includes('TOTAL:')) {
+                        values.total = line.split('TOTAL:')[1].trim();
+                    }
+                    // Add more parsing logic as needed for other fields
+                });
+
+                console.log(values);
+                // Optionally, send the data to the Telegram bot/server
+                // tg.sendData(JSON.stringify(values)); // Uncomment and customize if needed
+            }).catch(err => {
+                console.error(err);
+            });
+        });
+    </script>
+</body>
+
+</html>
