@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App - Scan Text</title>
+    <title>Telegram Mini App - Scan Invoice</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -22,11 +23,15 @@
             padding: 10px 20px;
             font-size: 16px;
         }
-        #output {
+        #output, #log {
             margin-top: 20px;
             text-align: left;
             white-space: pre-wrap;
             word-wrap: break-word;
+        }
+        #log {
+            color: #666;
+            font-size: 0.8em;
         }
     </style>
 </head>
@@ -35,12 +40,21 @@
     <h1>Scan Invoice</h1>
     <input type="file" id="fileInput" accept="image/*" capture="camera">
     <button id="scanButton">Scan Invoice</button>
+    <div id="log"></div>
     <pre id="output"></pre>
 
     <script>
         // Telegram Web Apps initialization
         const tg = window.Telegram.WebApp;
-        tg.ready();
+        tg.expand();
+
+        const logElement = document.getElementById('log');
+        const outputElement = document.getElementById('output');
+
+        function log(message) {
+            logElement.textContent += message + '\n';
+            console.log(message);
+        }
 
         document.getElementById('scanButton').addEventListener('click', () => {
             const fileInput = document.getElementById('fileInput');
@@ -51,33 +65,40 @@
                 return;
             }
 
+            log('Starting image processing...');
+            outputElement.textContent = 'Processing...';
+
             Tesseract.recognize(
                 file,
                 'eng',
                 {
-                    logger: (m) => console.log(m)
+                    logger: (m) => log(JSON.stringify(m))
                 }
             ).then(({ data: { text } }) => {
-                document.getElementById('output').textContent = text;
+                log('Text extraction complete.');
+                outputElement.textContent = text;
 
-                // Optional: Process the extracted text to detect values
+                // Process the extracted text to detect values
                 const lines = text.split('\n');
                 const values = {};
                 lines.forEach(line => {
-                    if (line.includes('DATE:')) {
-                        values.date = line.split('DATE:')[1].trim();
+                    if (line.toLowerCase().includes('date')) {
+                        values.date = line.split(':')[1]?.trim() || line;
                     }
-                    if (line.includes('TOTAL:')) {
-                        values.total = line.split('TOTAL:')[1].trim();
+                    if (line.toLowerCase().includes('total')) {
+                        values.total = line.split(':')[1]?.trim() || line;
                     }
                     // Add more parsing logic as needed for other fields
                 });
 
-                console.log(values);
-                // Optionally, send the data to the Telegram bot/server
-                tg.sendData(JSON.stringify(values)); // Uncomment and customize if needed
+                log('Extracted values: ' + JSON.stringify(values));
+
+                // Send the data to the Telegram bot/server
+                tg.sendData(JSON.stringify(values));
+                log('Data sent to Telegram.');
             }).catch(err => {
-                console.error(err);
+                log('Error: ' + err.message);
+                outputElement.textContent = 'Error occurred during processing.';
             });
         });
     </script>
