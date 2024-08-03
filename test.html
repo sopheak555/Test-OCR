@@ -75,7 +75,7 @@
 
                 console.log(values);
                 // Optionally, send the data to the Telegram bot/server
-                // tg.sendData(JSON.stringify(values)); // Uncomment and customize if needed
+                tg.sendData(JSON.stringify(values)); // Uncomment and customize if needed
             }).catch(err => {
                 console.error(err);
             });
